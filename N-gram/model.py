@@ -76,19 +76,6 @@ def tokenize(sentences, vocab, unknown="<UNK>"):
     return tokenized_sentences
 
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-imdb_folder = "imdb_data/unsup"
-sentences = load_imdb_unsup_sentences(imdb_folder)
-
-print(f"Number of raw sentences loaded: {len(sentences)}")
-print(f"Example (first 2 sentences):\n{sentences[:2]}")
-
-assert len(sentences) == 50000, "Expected 50,000 sentences from the unsup folder."
-
-random.seed(42)
-
-
 def split_data(sentences, test_split=0.1):
     """
     shuffle the sentences
@@ -101,37 +88,6 @@ def split_data(sentences, test_split=0.1):
     test_sentences = sentences[split_index:]
 
     return train_sentences, test_sentences
-
-
-train_sentences, test_sentences = split_data(sentences)
-
-print(f"Number of training sentences: {len(train_sentences)}")
-print(f"Number of test sentences: {len(test_sentences)}")
-
-assert len(train_sentences) == 45000, "Expected 45,000 sentences for training."
-assert len(test_sentences) == 5000, "Expected 5,000 sentences for testing."
-
-vocab = build_vocabulary(train_sentences)
-tokenized_sentences = tokenize(train_sentences, vocab)
-
-print(f"Vocabulary size: {len(vocab)}")
-print(
-    f"Example tokens from first sentence: {tokenized_sentences[0][:10] if tokenized_sentences else 'No tokens loaded'} ..."
-)
-
-assert (
-    len(tokenized_sentences) == 45000
-), "Expected tokenized sentences count to match raw sentences."
-
-example = "I love Natural language processing, and i want to be a great engineer."
-assert (
-    len(example) == 70
-), "Example sentence length (in characters) does not match the expected 70."
-
-example_tokens = tokenize([example], vocab)[0]
-assert (
-    len(example_tokens) == 13
-), "Token count for the example sentence does not match the expected 13."
 
 
 def pad_sentence(tokens, n):
@@ -195,12 +151,6 @@ def laplace_probability(ngram, ngram_counts, context_counts, vocab_size, alpha=1
     return prob
 
 
-n = 2
-ngram_counts, context_counts = build_ngram_counts(tokenized_sentences, n=n)
-print(f"Number of bigrams: {len(ngram_counts)}")
-print(f"Number of contexts: {len(context_counts)}")
-
-
 def predict_next_token(
     context_tokens, ngram_counts, context_counts, vocab, n=2, alpha=1.0, top_k=5
 ):
@@ -262,20 +212,6 @@ def generate_text_with_limit(
     return generated
 
 
-context = ["i", "love"]
-generated_seq = generate_text_with_limit(
-    start_tokens=context,
-    ngram_counts=ngram_counts,
-    context_counts=context_counts,
-    vocab=vocab,
-    n=2,
-    alpha=1.0,
-    max_length=128,
-)
-
-print("Generated Sequence:", generated_seq)
-
-
 def calculate_perplexity(
     tokenized_sentences, ngram_counts, context_counts, vocab_size, n=2, alpha=1.0
 ):
@@ -309,3 +245,77 @@ def calculate_perplexity(
 
     perplexity = exp(-log_prob_sum / total_tokens)
     return perplexity
+
+
+def main():
+    # Processing Data
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    imdb_folder = "imdb_data/unsup"
+    sentences = load_imdb_unsup_sentences(imdb_folder)
+
+    # print(f"Number of raw sentences loaded: {len(sentences)}")
+    # print(f"Example (first 2 sentences):\n{sentences[:2]}")
+
+    assert len(sentences) == 50000, "Expected 50,000 sentences from the unsup folder."
+
+    random.seed(42)
+
+    train_sentences, test_sentences = split_data(sentences)
+
+    # print(f"Number of training sentences: {len(train_sentences)}")
+    # print(f"Number of test sentences: {len(test_sentences)}")
+
+    assert len(train_sentences) == 45000, "Expected 45,000 sentences for training."
+    assert len(test_sentences) == 5000, "Expected 5,000 sentences for testing."
+
+    vocab = build_vocabulary(train_sentences)
+    tokenized_sentences = tokenize(train_sentences, vocab)
+
+    # print(f"Vocabulary size: {len(vocab)}")
+    # print(
+    #     f"Example tokens from first sentence: {tokenized_sentences[0][:10] if tokenized_sentences else 'No tokens loaded'} ..."
+    # )
+
+    assert (
+        len(tokenized_sentences) == 45000
+    ), "Expected tokenized sentences count to match raw sentences."
+
+    example = "I love Natural language processing, and i want to be a great engineer."
+    assert (
+        len(example) == 70
+    ), "Example sentence length (in characters) does not match the expected 70."
+
+    example_tokens = tokenize([example], vocab)[0]
+    assert (
+        len(example_tokens) == 13
+    ), "Token count for the example sentence does not match the expected 13."
+
+    # Building N-gram
+    n = 4
+    alpha = 1.5
+    ngram_counts, context_counts = build_ngram_counts(tokenized_sentences, n=n)
+    # print(f"Number of bigrams: {len(ngram_counts)}")
+    # print(f"Number of contexts: {len(context_counts)}")
+
+    context = ["i", "love"]
+    generated_seq = generate_text_with_limit(
+        start_tokens=context,
+        ngram_counts=ngram_counts,
+        context_counts=context_counts,
+        vocab=vocab,
+        n=n,
+        alpha=alpha,
+        max_length=128,
+    )
+
+    print("Generated Sequence:", generated_seq)
+
+    test_tockenized_sentences = tokenize(test_sentences, vocab)
+    print(
+        f"Preplexity: {calculate_perplexity(test_tockenized_sentences, ngram_counts, context_counts, len(vocab), n, alpha)}"
+    )
+
+
+if __name__ == "__main__":
+    main()
