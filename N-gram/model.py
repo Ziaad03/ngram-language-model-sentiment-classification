@@ -196,13 +196,30 @@ def generate_text_with_limit(
     while len(generated) < max_length:
         context_tokens = generated[-(n - 1) :]
         next_token_candidates = predict_next_token(
-            context_tokens, ngram_counts, context_counts, vocab, n, alpha, top_k=1
+            context_tokens,
+            ngram_counts,
+            context_counts,
+            vocab,
+            n,
+            alpha,
+            top_k=10,  # Increased top_k
         )
 
         if not next_token_candidates:
             break
 
-        next_token = next_token_candidates[0][0]
+        # Use weighted random choice based on probabilities
+        total_prob = sum(prob for _, prob in next_token_candidates)
+        rand_val = random.random() * total_prob
+        cumulative = 0
+
+        for token, prob in next_token_candidates:
+            cumulative += prob
+            if cumulative > rand_val:
+                next_token = token
+                break
+        else:
+            next_token = next_token_candidates[0][0]
 
         if next_token == "</s>":
             break
@@ -293,7 +310,7 @@ def main():
 
     # Building N-gram
     n = 4
-    alpha = 1.5
+    alpha = 2
     ngram_counts, context_counts = build_ngram_counts(tokenized_sentences, n=n)
     # print(f"Number of bigrams: {len(ngram_counts)}")
     # print(f"Number of contexts: {len(context_counts)}")
